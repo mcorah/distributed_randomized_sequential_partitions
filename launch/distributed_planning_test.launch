@@ -1,0 +1,23 @@
+<launch>
+  <param name="distributed_planning/epoch_duration" value="1.0"/>
+  <param name="distributed_planning/planner_topic" value="/distributed_planning"/>
+
+  <param name="distributed_planning/num_rounds" value="2"/>
+  <param name="distributed_planning/message_latency" value="0.05"/>
+
+  <node pkg="distributed_randomized_sequential_partitions"
+    type="simple_distributed_planning_node"
+    name="distributed_planner_1"
+    output="screen"
+    >
+    <param name="planner_id" value="1"/>
+  </node>
+
+  <node pkg="distributed_randomized_sequential_partitions"
+    type="simple_distributed_planning_node"
+    name="distributed_planner_2"
+    output="screen"
+    >
+    <param name="planner_id" value="2"/>
+  </node>
+</launch>
