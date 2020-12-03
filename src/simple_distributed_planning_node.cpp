@@ -15,14 +15,6 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "distributed_planner");
   ros::NodeHandle n;
 
-  // I probably do not need an asynchronous queue at first, and passing the queue
-  // in on the node should suffice.
-
-  // auto asynchronous_callback_queue = std::make_shared<ros::CallbackQueue>();
-  // auto async_spinner =
-    // std::make_shared<ros::AsyncSpinner>(4, asynchronous_callback_queue.get());
-
-
   dist::RandomizedDistributedPlanner<Message> distributed_planner;
 
   if (!distributed_planner.initialize(n))
@@ -32,6 +24,9 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  // A minimal callback
+  // * This is where your anytime planner goes in a fully realized distributed
+  //   planner
   auto planner_callback = [](double planning_time,
       const std::vector<Message>& prior_decisions, Message&)
   {
@@ -45,13 +40,6 @@ int main(int argc, char** argv)
   };
 
   distributed_planner.setPlannerCallback(planner_callback);
-
-  // spinners are basically singletons
-  //if(!async_spinner->canStart())
-  //{
-    //return EXIT_FAILURE;
-  //}
-  //async_spinner->start();
 
   distributed_planner.start();
 
