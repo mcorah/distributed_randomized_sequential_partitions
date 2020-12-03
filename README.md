@@ -36,6 +36,15 @@ implement the local robot's planning process.
 
 Run this node via `launch/distributed_planning_test.launch`
 
+While running, processes will print details of messages they receive as well as
+the planning epochs.
+Then, when each process stops, they will print a comparison between actual and
+expected message acceptance rates
+(which determines the expected solution quality and whether the planner is
+functioning as expected).
+If the message rate is low *after running for a while* consider changing
+settings for timing in the launch file (see parameters below).
+
 ## Designing your own planner
 
 This implementation of RSP is intended to be easy to incorporate into existing
