@@ -40,7 +40,7 @@ namespace distributed_randomized_sequential_partitions
     ros::NodeHandle node(n);
 
     std::string param_path;
-    if(!node.searchParam(query, param_path))
+    if(!ros::param::search(query, param_path))
     {
       ROS_WARN_STREAM("Failed to search for param: " << query);
       return false;
