@@ -5,6 +5,28 @@ Sequential Partitions (RSP) for online receding-horizon sensor planning.
 This scheduling solver was initially designed for use in a system for
 distributed exploration, described in the referenced work.
 
+## Build instructions
+
+This package builds via catkin and runs via ROS.
+While there are various ways to create a workspace or add this RSP planner to an
+existing workspace, the following commands suffice to create a new workspace in
+ROS *kinetic* and run the example code:
+```
+# Setup the workspace
+source /opt/ros/kinetic/setup.bash
+mkdir -p ~/rsp_workspace/src
+cd ~/rsp_workspace/src
+
+# Install and build
+git clone git@github.com:mcorah/distributed_randomized_sequential_partitions.git
+cd ..
+catkin build
+
+# Load the workspace and run the example
+source devel/setup.bash
+roslaunch distributed_randomized_sequential_partitions distributed_planning_test.launch
+```
+
 ## Examples
 
 `src/simple_distributed_planning_node.cpp` implements a minimal example of
