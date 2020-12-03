@@ -266,7 +266,9 @@ namespace distributed_randomized_sequential_partitions
 
       virtual bool initialize(const ros::NodeHandle& n)
       {
-        AbstractDistributedPlanner<Message>::initialize(n);
+        if (!AbstractDistributedPlanner<Message>::initialize(n))
+          return false;
+
         ros::NodeHandle node(n);
 
         std::random_device random_device;
