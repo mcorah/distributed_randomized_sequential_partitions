@@ -65,6 +65,9 @@ namespace distributed_randomized_sequential_partitions
       using PlannerCallback =
           std::function<void (double, const std::vector<Message>&, Message&)>;
 
+      using TransmissionFailureCallback =
+          std::function<bool (const Message&)>;
+
       virtual ~AbstractDistributedPlanner()
       {
         stop();
@@ -74,12 +77,19 @@ namespace distributed_randomized_sequential_partitions
       {
         ros::NodeHandle node(n);
 
+        std::random_device random_device;
+        rng.seed(random_device());
+
         if (!loadParam(node, "distributed_planning/epoch_duration",
                        epoch_duration))
           return false;
 
         if (!loadParam(node, "planner_id", reinterpret_cast<int&>(planner_id)))
           return false;
+
+        // Defaults to communication failures disabled
+        loadParam(node, "distributed_planning/simulated_communication_failure_rate",
+                   simulated_communication_failure_rate);
 
         return true;
       }
@@ -174,6 +184,43 @@ namespace distributed_randomized_sequential_partitions
         this->planner_callback = planner_callback;
       }
 
+      // Simulated transmission failure callback:
+      // Input: Message (prior decision) received during a planning round
+      //
+      // Output: Return true if the planner should simulate failure to transmit
+      // this message (e.g. rejection due to distance)
+      void setSimulatedTransmissionFailureCallback(
+          TransmissionFailureCallback transmission_failure_callback)
+      {
+        this->transmission_failure_callback = transmission_failure_callback;
+      }
+
+      // Use a generic tranmission failure callback or the default (random)
+      // Returns true if transmission failed
+      bool simulatedTransmissionFailed(const Message& decision)
+      {
+        // Sample transmission failure, and return true if failed
+        if(simulated_communication_failure_rate >= 0)
+        {
+          std::bernoulli_distribution
+            failure(simulated_communication_failure_rate);
+
+          if(failure(rng))
+          {
+            return true;
+          }
+        }
+
+        // Use the transmission failure callback if available
+        if(transmission_failure_callback)
+        {
+          return transmission_failure_callback(decision);
+        }
+
+        // Transmission succeeds by default
+        return false;
+      }
+
     protected:
       // Compute the number of the current epoch.
       // (epoch zero starts at time zero)
@@ -229,6 +276,14 @@ namespace distributed_randomized_sequential_partitions
       std::thread planner_thread;
 
       PlannerCallback planner_callback;
+
+      // Communication failure
+      double simulated_communication_failure_rate = -1;
+
+      TransmissionFailureCallback transmission_failure_callback;
+
+      // Using a distinct rng in the abstract class
+      std::mt19937 rng;
   };
 
   template<class Message>
@@ -359,13 +414,24 @@ namespace distributed_randomized_sequential_partitions
       // at planning time.
       void bufferDecision(const Message& decision)
       {
-        std::lock_guard<std::mutex> lock(decision_mutex);
-
         auto planner_id = decision.signature.planner_id;
 
-        if(planner_id != this->getId())
+        if(this->simulatedTransmissionFailed(decision))
         {
-          prior_decision_buffer.push_back(decision);
+          ROS_INFO_STREAM("Planner " << this->getId()
+              << " rejecting decision from " << planner_id
+              << " (simulated transmission failure)");
+
+          return;
+        }
+
+        {
+          std::lock_guard<std::mutex> lock(decision_mutex);
+
+          if(planner_id != this->getId())
+          {
+            prior_decision_buffer.push_back(decision);
+          }
         }
 
         ROS_INFO_STREAM("Planner " << this->getId()
