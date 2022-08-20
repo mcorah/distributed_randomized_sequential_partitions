@@ -419,8 +419,10 @@ namespace distributed_randomized_sequential_partitions
         if(this->simulatedTransmissionFailed(decision))
         {
           ROS_INFO_STREAM("Planner " << this->getId()
-              << " rejecting decision from " << planner_id
+              << " filtering out decision from " << planner_id
               << " (simulated transmission failure)");
+
+          this->round_failed += 1;
 
           return;
         }
@@ -447,6 +449,12 @@ namespace distributed_randomized_sequential_partitions
         printf("Planner %u: Acceptance rate %0.3f, Expected %0.3f\n",
                  this->getId(), actual_acceptance_rate,
                  expected_acceptance_rate);
+
+        double failure_rate = double(num_failed)
+          / (num_accepted + num_rejected + num_failed);
+
+        printf("Planner %u: Failure rate %0.3f\n",
+                 this->getId(), failure_rate);
       }
 
     private:
@@ -496,6 +504,7 @@ namespace distributed_randomized_sequential_partitions
 
         num_rejected += round_rejected;
         num_accepted += round_accepted;
+        num_failed += this->round_failed;
 
         ROS_INFO_STREAM("Planner " << this->getId() << " Accepted "
                                    << prior_decisions.size() << " decisions");
@@ -503,8 +512,13 @@ namespace distributed_randomized_sequential_partitions
         DistributedPlannerStatistics msg;
         msg.total_accepted = num_accepted;
         msg.total_rejected = num_rejected;
+        msg.total_failed = num_failed;
         msg.round_accepted = round_accepted;
         msg.round_rejected = round_rejected;
+        msg.round_failed = this->round_failed;
+
+        // Round failed is a class variable and must be reset
+        this->round_failed = 0;
 
         statistics_pub.publish(msg);
 
@@ -528,6 +542,9 @@ namespace distributed_randomized_sequential_partitions
       // match expectations
       unsigned num_accepted = 0;
       unsigned num_rejected = 0;
+
+      unsigned round_failed = 0;
+      unsigned num_failed = 0;
 
       ros::Publisher decision_pub;
       ros::Subscriber decision_sub;
